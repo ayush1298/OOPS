@@ -1,0 +1,1327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive C++ OOP Explorer with Gemini</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Harmony -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FDFBF8;
+            color: #4A4A4A;
+        }
+        .nav-link {
+            transition: all 0.2s ease-in-out;
+            border-left: 3px solid transparent;
+        }
+        .nav-link.active {
+            background-color: #F3EFEA;
+            color: #A57D52;
+            border-left-color: #A57D52;
+        }
+        .nav-link:hover {
+            background-color: #F7F3F0;
+            border-left-color: #D1BFA8;
+        }
+        .concept-card {
+            background-color: #FFFFFF;
+            border: 1px solid #EAEAEA;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .concept-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+        }
+        .code-block {
+            background-color: #2D3748;
+            color: #E2E8F0;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            position: relative;
+        }
+        .copy-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background-color: #4A5568;
+            color: #E2E8F0;
+            border: none;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .copy-btn:hover {
+            background-color: #718096;
+        }
+        .concept-link, .qa-link {
+            color: #A57D52;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            border-bottom: 1px dotted #A57D52;
+        }
+        .concept-link:hover, .qa-link:hover {
+            color: #8C6A46;
+            border-bottom: 1px solid #8C6A46;
+        }
+        .sidebar {
+            transition: transform 0.3s ease-in-out;
+        }
+        .gemini-btn {
+            background-color: #A57D52;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+        .gemini-btn:hover {
+            background-color: #8C6A46;
+        }
+        .gemini-btn:disabled {
+            background-color: #D1BFA8;
+            cursor: not-allowed;
+        }
+        .gemini-output {
+            background-color: #F7F3F0;
+            border-left: 4px solid #A57D52;
+            padding: 1rem;
+            margin-top: 1rem;
+            border-radius: 0.25rem;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #A57D52;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            margin: 1rem auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                position: fixed;
+                z-index: 40;
+                height: 100%;
+            }
+            .sidebar.open {
+                transform: translateX(0);
+            }
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="relative min-h-screen md:flex">
+        <!-- Mobile Menu Button -->
+        <div class="md:hidden flex justify-between items-center p-4 bg-white border-b border-gray-200 sticky top-0 z-30">
+            <h1 class="text-xl font-bold text-[#A57D52]">OOP Explorer</h1>
+            <button id="mobile-menu-button" class="p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#A57D52]">
+                <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Sidebar -->
+        <aside id="sidebar" class="sidebar bg-white w-64 min-h-screen p-4 space-y-6 md:block md:sticky md:top-0 md:self-start">
+            <h1 class="text-2xl font-bold text-center text-[#A57D52]">C++ OOP Explorer</h1>
+            <nav id="nav-menu" class="space-y-4">
+                <div>
+                    <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider px-4">The Basics</h3>
+                    <div class="mt-2 space-y-1">
+                        <a href="#class" class="nav-link block px-4 py-2 text-sm font-medium rounded-md">Class</a>
+                        <a href="#object" class="nav-link block px-4 py-2 text-sm font-medium rounded-md">Object</a>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider px-4">Four Pillars</h3>
+                    <div class="mt-2 space-y-1">
+                        <a href="#encapsulation" class="nav-link block px-4 py-2 text-sm font-medium rounded-md">Encapsulation</a>
+                        <a href="#abstraction" class="nav-link block px-4 py-2 text-sm font-medium rounded-md">Abstraction</a>
+                        <a href="#inheritance" class="nav-link block px-4 py-2 text-sm font-medium rounded-md">Inheritance</a>
+                        <a href="#polymorphism" class="nav-link block px-4 py-2 text-sm font-medium rounded-md">Polymorphism</a>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider px-4">Key Mechanisms</h3>
+                    <div class="mt-2 space-y-1">
+                        <a href="#constructor" class="nav-link block px-4 py-2 text-sm font-medium rounded-md">Constructors</a>
+                        <a href="#copy-constructor" class="nav-link block px-4 py-2 text-sm font-medium rounded-md">Copy Constructor</a>
+                        <a href="#destructor" class="nav-link block px-4 py-2 text-sm font-medium rounded-md">Destructors</a>
+                        <a href="#access-specifiers" class="nav-link block px-4 py-2 text-sm font-medium rounded-md">Access Specifiers</a>
+                        <a href="#this-pointer" class="nav-link block px-4 py-2 text-sm font-medium rounded-md">The 'this' Pointer</a>
+                        <a href="#static-members" class="nav-link block px-4 py-2 text-sm font-medium rounded-md">Static Members</a>
+                        <a href="#friend-functions" class="nav-link block px-4 py-2 text-sm font-medium rounded-md">Friend Functions & Classes</a>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider px-4">Advanced Concepts</h3>
+                    <div class="mt-2 space-y-1">
+                        <a href="#operator-overloading" class="nav-link block px-4 py-2 text-sm font-medium rounded-md">Operator Overloading</a>
+                        <a href="#virtual-functions" class="nav-link block px-4 py-2 text-sm font-medium rounded-md">Virtual Functions</a>
+                        <a href="#abstract-classes" class="nav-link block px-4 py-2 text-sm font-medium rounded-md">Abstract Classes</a>
+                    </div>
+                </div>
+                 <div>
+                    <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider px-4">Interview Prep</h3>
+                    <div class="mt-2 space-y-1">
+                        <a href="#qa-landing" class="nav-link block px-4 py-2 text-sm font-medium rounded-md">Q & A</a>
+                    </div>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main id="main-content" class="flex-1 p-6 sm:p-10">
+            <!-- Content will be injected here -->
+        </main>
+    </div>
+
+    <!-- Templates for each concept -->
+    <template id="template-welcome">
+        <div class="animate-fade-in">
+            <h2 class="text-4xl font-bold text-gray-800 mb-4">Welcome to the OOP Explorer</h2>
+            <p class="text-lg text-gray-600 mb-2">
+                This interactive tool is your comprehensive guide to C++ Object-Oriented Programming. Select a concept from the navigation to begin.
+            </p>
+            <p class="text-lg text-gray-600 mb-8">
+                Look for the ✨ buttons to get AI-powered analogies and code explanations from Gemini!
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <a href="#encapsulation" class="concept-card p-6 block rounded-lg nav-link-card">
+                    <h3 class="text-2xl font-bold text-[#A57D52] mb-2">Encapsulation</h3>
+                    <p class="text-gray-600">Bundling data and methods together, hiding the internal details from the outside world.</p>
+                </a>
+                <a href="#abstraction" class="concept-card p-6 block rounded-lg nav-link-card">
+                    <h3 class="text-2xl font-bold text-[#A57D52] mb-2">Abstraction</h3>
+                    <p class="text-gray-600">Hiding complex reality while exposing only the essential parts. Think "need-to-know" basis.</p>
+                </a>
+                <a href="#inheritance" class="concept-card p-6 block rounded-lg nav-link-card">
+                    <h3 class="text-2xl font-bold text-[#A57D52] mb-2">Inheritance</h3>
+                    <p class="text-gray-600">Creating new classes from existing ones, enabling code reuse and establishing relationships.</p>
+                </a>
+                <a href="#polymorphism" class="concept-card p-6 block rounded-lg nav-link-card">
+                    <h3 class="text-2xl font-bold text-[#A57D52] mb-2">Polymorphism</h3>
+                    <p class="text-gray-600">Allowing objects to take on many forms, enabling flexible and dynamic code.</p>
+                </a>
+            </div>
+        </div>
+    </template>
+
+    <template id="template-class">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4" data-concept-name="Class">Class</h2>
+        <div class="space-y-6">
+            <div>
+                <h3 class="text-xl font-semibold text-[#A57D52] mb-2">Detailed Concept</h3>
+                <p>A class in C++ is a user-defined data type that acts as a blueprint for creating <a href="#object" class="concept-link">objects</a>. It bundles data members (attributes or variables) and member functions (methods or functions) into a single unit. Think of it as a detailed architectural plan for a house. The plan specifies that the house will have bedrooms, a kitchen, and bathrooms (attributes), and it also describes what you can do in it, like cooking or sleeping (methods). The class itself doesn't take up any memory; it's just the definition.</p>
+                <div class="mt-4">
+                    <button class="gemini-btn" data-feature="analogy">✨ Explain with an Analogy</button>
+                    <div class="gemini-output-analogy mt-2"></div>
+                </div>
+            </div>
+            <div>
+                <h3 class="text-xl font-semibold text-[#A57D52] mb-2">Example</h3>
+                <p class="mb-2">Here is a blueprint for a `Dog`. It defines that any dog will have a name and an age, and will be able to bark.</p>
+                <div class="code-block">
+                    <button class="copy-btn">Copy</button>
+                    <pre><code>#include &lt;string&gt;
+#include &lt;iostream&gt;
+
+// Definition of the Dog class
+class Dog {
+public:
+    // Attributes (Data Members)
+    std::string name;
+    int age;
+
+    // Method (Member Function)
+    void bark() {
+        std::cout << name << " says: Woof!" << std::endl;
+    }
+};</code></pre>
+                </div>
+                <div class="mt-4">
+                    <button class="gemini-btn" data-feature="code">✨ Explain This Code</button>
+                    <div class="gemini-output-code mt-2"></div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="template-object">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4" data-concept-name="Object">Object</h2>
+        <div class="space-y-6">
+            <div>
+                <h3 class="text-xl font-semibold text-[#A57D52] mb-2">Detailed Concept</h3>
+                <p>An object is a specific, real-world instance of a <a href="#class" class="concept-link">class</a>. When a class is defined, no memory is allocated, but when an object is created (a process called instantiation), memory is allocated. Following the house analogy, if the class is the blueprint, an object is an actual house built from that blueprint. You can build many houses (objects) from the same blueprint (class), and each house will have its own specific attributes (e.g., one is red, another is blue) but will share the same fundamental structure and behaviors defined by the blueprint.</p>
+                 <div class="mt-4">
+                    <button class="gemini-btn" data-feature="analogy">✨ Explain with an Analogy</button>
+                    <div class="gemini-output-analogy mt-2"></div>
+                </div>
+            </div>
+            <div>
+                <h3 class="text-xl font-semibold text-[#A57D52] mb-2">Example</h3>
+                <p class="mb-2">Using the `Dog` class, we can create multiple `Dog` objects. Each one is a distinct entity in memory with its own `name` and `age`.</p>
+                <div class="code-block">
+                    <button class="copy-btn">Copy</button>
+                    <pre><code>// Assuming the Dog class from the previous example is defined
+
+int main() {
+    // Create an object (instance) of the Dog class
+    Dog myDog;
+    myDog.name = "Buddy";
+    myDog.age = 3;
+    myDog.bark(); // Output: Buddy says: Woof!
+
+    // Create another, separate object
+    Dog anotherDog;
+    anotherDog.name = "Lucy";
+    anotherDog.age = 5;
+    anotherDog.bark(); // Output: Lucy says: Woof!
+
+    return 0;
+}</code></pre>
+                </div>
+                 <div class="mt-4">
+                    <button class="gemini-btn" data-feature="code">✨ Explain This Code</button>
+                    <div class="gemini-output-code mt-2"></div>
+                </div>
+            </div>
+        </div>
+    </template>
+    
+    <template id="template-encapsulation">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4" data-concept-name="Encapsulation">Encapsulation</h2>
+        <div class="space-y-6">
+            <div>
+                <h3 class="text-xl font-semibold text-[#A57D52] mb-2">Detailed Concept</h3>
+                <p>Encapsulation is the bundling of data (attributes) and the methods that operate on that data into a single unit (a <a href="#class" class="concept-link">class</a>). A key part of encapsulation is data hiding: restricting direct access to an object's internal state. This is achieved by making data members `private` or `protected` and providing `public` methods (often called getters and setters) to access and modify them. This protects the data from accidental corruption and ensures that the object's state is always valid, as all modifications must go through controlled functions that can perform validation.</p>
+                 <div class="mt-4">
+                    <button class="gemini-btn" data-feature="analogy">✨ Explain with an Analogy</button>
+                    <div class="gemini-output-analogy mt-2"></div>
+                </div>
+            </div>
+            <div>
+                <h3 class="text-xl font-semibold text-[#A57D52] mb-2">Example</h3>
+                <p class="mb-2">In this `BankAccount` class, the `balance` is `private`. You cannot change it directly. You must use the `deposit` or `withdraw` methods, which contain logic to prevent invalid operations (like withdrawing more money than you have).</p>
+                <div class="code-block">
+                    <button class="copy-btn">Copy</button>
+                    <pre><code>class BankAccount {
+private:
+    double balance; // Hidden from the outside world
+
+public:
+    // Constructor to initialize the balance
+    BankAccount(double initialBalance) : balance(initialBalance) {}
+
+    // Public method to deposit money safely
+    void deposit(double amount) {
+        if (amount > 0) {
+            balance += amount;
+        }
+    }
+
+    // Public method to withdraw money safely
+    bool withdraw(double amount) {
+        if (amount > 0 && amount <= balance) {
+            balance -= amount;
+            return true; // Success
+        }
+        return false; // Failed
+    }
+
+    // Public "getter" method to view the balance
+    double getBalance() {
+        return balance;
+    }
+};</code></pre>
+                </div>
+                 <div class="mt-4">
+                    <button class="gemini-btn" data-feature="code">✨ Explain This Code</button>
+                    <div class="gemini-output-code mt-2"></div>
+                </div>
+            </div>
+        </div>
+    </template>
+    
+    <template id="template-abstraction">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4" data-concept-name="Abstraction">Abstraction</h2>
+        <div class="space-y-6">
+            <div>
+                <h3 class="text-xl font-semibold text-[#A57D52] mb-2">Detailed Concept</h3>
+                <p>Abstraction is the principle of hiding complex implementation details and exposing only the essential, high-level features of an object. It's about simplifying a complex system by providing a clear and simple interface. For example, when you drive a car, you interact with a simple interface (steering wheel, pedals, gear stick). You don't need to know the complex mechanics of the engine, transmission, or braking system. Abstraction allows us to manage complexity by focusing on *what* an object does, not *how* it does it. In C++, this is often achieved using <a href="#abstract-classes" class="concept-link">Abstract Classes</a> and public methods of a class.</p>
+                 <div class="mt-4">
+                    <button class="gemini-btn" data-feature="analogy">✨ Explain with an Analogy</button>
+                    <div class="gemini-output-analogy mt-2"></div>
+                </div>
+            </div>
+            <div>
+                <h3 class="text-xl font-semibold text-[#A57D52] mb-2">Example</h3>
+                <p class="mb-2">When you use a coffee machine, you just press the "brew" button. You don't need to know about the heating elements, water pumps, or temperature sensors. The machine provides a simple interface (`brewCoffee()`) that hides the complexity. This is abstraction.</p>
+                <div class="code-block">
+                    <button class="copy-btn">Copy</button>
+                    <pre><code>class CoffeeMachine {
+private:
+    // Complex internal functions hidden from the user
+    void heatWater() { /* ... complex logic ... */ }
+    void grindBeans() { /* ... complex logic ... */ }
+
+public:
+    // Simple public interface
+    void brewCoffee() {
+        std::cout << "Starting to brew..." << std::endl;
+        heatWater();
+        grindBeans();
+        std::cout << "Coffee is ready!" << std::endl;
+    }
+};</code></pre>
+                </div>
+                 <div class="mt-4">
+                    <button class="gemini-btn" data-feature="code">✨ Explain This Code</button>
+                    <div class="gemini-output-code mt-2"></div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="template-inheritance">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4" data-concept-name="Inheritance">Inheritance</h2>
+        <div class="space-y-6">
+            <div>
+                <h3 class="text-xl font-semibold text-[#A57D52] mb-2">Detailed Concept</h3>
+                <p>Inheritance is a powerful feature that allows a new class (called the derived or child class) to acquire the properties and behaviors of an existing class (the base or parent class). This creates an "is-a" relationship (e.g., a `Dog` is an `Animal`). The primary benefit is code reusability; you can write common code once in a base class and reuse it across multiple specialized derived classes. Derived classes can use the members of the base class and also add their own unique members. C++ supports several types of inheritance: Single, Multiple, Multilevel, Hierarchical, and Hybrid.</p>
+                 <div class="mt-4">
+                    <button class="gemini-btn" data-feature="analogy">✨ Explain with an Analogy</button>
+                    <div class="gemini-output-analogy mt-2"></div>
+                </div>
+            </div>
+            <div>
+                <h3 class="text-xl font-semibold text-[#A57D52] mb-2">Example (Single Inheritance)</h3>
+                <p class="mb-2">A general `Animal` class has a method `eat()`. The `Dog` class inherits from `Animal`, so it automatically gets the `eat()` method. The `Dog` class can also add its own specific method, `bark()`.</p>
+                <div class="code-block">
+                    <button class="copy-btn">Copy</button>
+                    <pre><code>// Base class (Parent)
+class Animal {
+public:
+    void eat() {
+        std::cout << "This animal is eating." << std::endl;
+    }
+};
+
+// Derived class (Child)
+class Dog : public Animal { // The ':' signifies inheritance
+public:
+    void bark() {
+        std::cout << "The dog is barking." << std::endl;
+    }
+};</code></pre>
+                </div>
+                 <div class="mt-4">
+                    <button class="gemini-btn" data-feature="code">✨ Explain This Code</button>
+                    <div class="gemini-output-code mt-2"></div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="template-polymorphism">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4" data-concept-name="Polymorphism">Polymorphism</h2>
+        <div class="space-y-6">
+            <div>
+                <h3 class="text-xl font-semibold text-[#A57D52] mb-2">Detailed Concept</h3>
+                <p>Polymorphism, meaning "many forms," is the ability of an object to take on many forms. In C++, it allows you to treat objects of different classes as if they were objects of a common base class. This enables you to write more generic and flexible code. There are two types:</p>
+                <ul class="list-disc list-inside mt-2 space-y-1">
+                    <li><b>Compile-time (Static) Polymorphism:</b> Achieved through function overloading and operator overloading. The decision of which function to call is made at compile time.</li>
+                    <li><b>Run-time (Dynamic) Polymorphism:</b> Achieved through <a href="#virtual-functions" class="concept-link">virtual functions</a> and pointers/references to base classes. The decision of which function to call is delayed until runtime, based on the actual type of the object.</li>
+                </ul>
+                 <div class="mt-4">
+                    <button class="gemini-btn" data-feature="analogy">✨ Explain with an Analogy</button>
+                    <div class="gemini-output-analogy mt-2"></div>
+                </div>
+            </div>
+            <div>
+                <h3 class="text-xl font-semibold text-[#A57D52] mb-2">Example (Run-time Polymorphism)</h3>
+                <p class="mb-2">We have a base `Shape` class with a virtual `draw()` method. `Circle` and `Square` classes override this method. We can have an array of `Shape` pointers, but at runtime, the correct `draw()` method for each specific shape is called.</p>
+                <div class="code-block">
+                    <button class="copy-btn">Copy</button>
+                    <pre><code>class Shape {
+public:
+    // The 'virtual' keyword enables run-time polymorphism
+    virtual void draw() { std::cout << "Drawing a generic shape." << std::endl; }
+};
+
+class Circle : public Shape {
+public:
+    void draw() override { std::cout << "Drawing a circle." << std::endl; }
+};
+
+class Square : public Shape {
+public:
+    void draw() override { std::cout << "Drawing a square." << std::endl; }
+};</code></pre>
+                </div>
+                 <div class="mt-4">
+                    <button class="gemini-btn" data-feature="code">✨ Explain This Code</button>
+                    <div class="gemini-output-code mt-2"></div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="template-constructor">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4" data-concept-name="Constructor">Constructor</h2>
+        <div class="space-y-6">
+            <div>
+                <h3 class="text-xl font-semibold text-[#A57D52] mb-2">Detailed Concept</h3>
+                <p>A constructor is a special member function that is automatically called when an <a href="#object" class="concept-link">object</a> of a class is created. It has the same name as the class and no return type. Its primary job is to initialize the object's data members to ensure the object starts in a valid and usable state. If you don't provide a constructor, the compiler provides a default one. As soon as we create a new parameterized constructor, we lose the automatically generated default constructor provided by the compiler. Constructors can be overloaded to provide different ways of initializing an object.</p>
+                <div class="mt-4">
+                    <button class="gemini-btn" data-feature="analogy">✨ Explain with an Analogy</button>
+                    <div class="gemini-output-analogy mt-2"></div>
+                </div>
+            </div>
+            <div>
+                <h3 class="text-xl font-semibold text-[#A57D52] mb-2">Example</h3>
+                <p class="mb-2">The `Car` constructor takes the initial color and max speed as arguments, ensuring that every `Car` object is created in a valid, initialized state.</p>
+                <div class="code-block">
+                    <button class="copy-btn">Copy</button>
+                    <pre><code>class Car {
+public:
+    std::string color;
+    int maxSpeed;
+
+    // Constructor with member initializer list (preferred)
+    Car(std::string c, int ms) : color(c), maxSpeed(ms) {
+        std::cout << "A " << color << " car is created!" << std::endl;
+    }
+};</code></pre>
+                </div>
+                <h3 class="text-xl font-semibold text-[#A57D52] mt-6 mb-2">Constructor Overloading Example</h3>
+                <div class="code-block">
+                    <button class="copy-btn">Copy</button>
+                    <pre><code>class Car {
+public:
+    std::string color;
+    int maxSpeed;
+
+    Car() : color("default"), maxSpeed(0) {}
+    Car(int v1) : color("default"), maxSpeed(v1) {}
+    Car(int v1, std::string v2) : maxSpeed(v1), color(v2) {}
+};</code></pre>
+                </div>
+                <div class="mt-4">
+                    <button class="gemini-btn" data-feature="code">✨ Explain This Code</button>
+                    <div class="gemini-output-code mt-2"></div>
+                </div>
+            </div>
+        </div>
+    </template>
+    
+    <template id="template-copy-constructor">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4" data-concept-name="Copy Constructor">Copy Constructor</h2>
+        <div class="space-y-6">
+            <div>
+                <h3 class="text-xl font-semibold text-[#A57D52] mb-2">Detailed Concept</h3>
+                <p>A copy constructor is a special constructor that creates a new object as a copy of an existing object of the same class. It receives only 1 parameter which will be of the same type as the class it belongs to. It is invoked when initializing an object with another object, passing an object by value to a function, or returning an object by value from a function.</p>
+                <p>C++ provides a default copy constructor for every class. This default version performs a **shallow copy**, which means it copies each member of the object bit by bit. This works fine for simple classes, but it can cause serious problems for classes that manage dynamic memory (e.g., have pointer members) because both pointers will reference the same physical location. We must define our own custom copy constructor in that case to perform a **deep copy**.</p>
+                <div class="mt-4">
+                    <button class="gemini-btn" data-feature="analogy">✨ Explain with an Analogy</button>
+                    <div class="gemini-output-analogy mt-2"></div>
+                </div>
+            </div>
+            <div>
+                <h3 class="text-xl font-semibold text-[#A57D52] mb-2">Shallow Copy vs. Deep Copy</h3>
+                <p class="mb-2">A **shallow copy** stores references/addresses of the original object, whereas a **deep copy** fully allocates independent memory and recursively copies values, ensuring absolute separation of instances.</p>
+                <h3 class="text-xl font-semibold text-[#A57D52] mt-6 mb-2">Example: The Solution with Deep Copy</h3>
+                <p class="mb-2">The custom copy constructor allocates new memory for the copied object, ensuring they are independent. We pass the parameter by reference and mark it `const` to prevent accidental modification of the original object.</p>
+                <div class="code-block">
+                    <button class="copy-btn">Copy</button>
+                    <pre><code>class GoodBox {
+public:
+    int* data;
+    GoodBox(int val) { data = new int(val); }
+    ~GoodBox() { delete data; }
+
+    // Custom Copy Constructor (Deep Copy)
+    GoodBox(const GoodBox& other) {
+        data = new int; // Allocate new memory
+        *data = *other.data; // Copy the value, not the address
+    }
+};</code></pre>
+                </div>
+                <div class="mt-4">
+                    <button class="gemini-btn" data-feature="code">✨ Explain This Code</button>
+                    <div class="gemini-output-code mt-2"></div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="template-destructor">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4" data-concept-name="Destructor">Destructor</h2>
+        <div class="space-y-6">
+            <div>
+                <h3 class="text-xl font-semibold text-[#A57D52] mb-2">Detailed Concept</h3>
+                <p>A destructor is a special member function that is automatically called when an object is destroyed (e.g., when it goes out of scope or is explicitly deleted using `delete`). It has the same name as the class, prefixed with a tilde (`~`), and has no return type or parameters. There can be only one destructor per class. Its main purpose is to perform cleanup and release resources (like dynamically allocated memory or open files) that the object acquired during its lifetime. This is crucial for preventing resource leaks in a program.</p>
+                <div class="mt-4">
+                    <button class="gemini-btn" data-feature="analogy">✨ Explain with an Analogy</button>
+                    <div class="gemini-output-analogy mt-2"></div>
+                </div>
+            </div>
+            <div>
+                <h3 class="text-xl font-semibold text-[#A57D52] mb-2">Example 1: Resource Cleanup</h3>
+                <p class="mb-2">Rule of thumb: Have as many `delete` calls as you have `new` calls, and as many `delete[]` as `new[]` calls.</p>
+                <div class="code-block">
+                    <button class="copy-btn">Copy</button>
+                    <pre><code>class FileHandler {
+public:
+    int* buffer;
+
+    FileHandler(int size) {
+        buffer = new int[size]; // Allocate memory
+    }
+
+    ~FileHandler() {
+        delete[] buffer; // Release the allocated memory
+        buffer = nullptr;
+    }
+};</code></pre>
+                </div>
+                <h3 class="text-xl font-semibold text-[#A57D52] mt-6 mb-2">Example 2: Deallocating an Array of Pointers</h3>
+                <p class="mb-2">When you have an array of pointers, you must loop through the array and delete each pointer individually. Calling `delete[]` on the array variable will only free the array container, not the elements themselves!</p>
+                <div class="code-block">
+                    <button class="copy-btn">Copy</button>
+                    <pre><code>Student* stud[3]; // Stack-allocated array of pointers
+stud[0] = new ScienceStudent();
+stud[1] = new CommerceStudent();
+stud[2] = new ArtsStudent();
+
+// Correct deallocation:
+for(int i = 0; i < 3; i++) {
+    delete stud[i]; // Delete each heap object individually
+}</code></pre>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="template-access-specifiers">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4" data-concept-name="Access Specifiers">Access Specifiers</h2>
+        <div class="space-y-6">
+            <div>
+                <h3 class="text-xl font-semibold text-[#A57D52] mb-2">Detailed Concept</h3>
+                <p>Access specifiers define the visibility of class members:</p>
+                <ul class="list-disc list-inside mt-2 space-y-1">
+                    <li><strong class="font-semibold">`public`</strong>: Accessible from anywhere.</li>
+                    <li><strong class="font-semibold">`private`</strong>: Accessible only within the class. This is the default in C++ classes.</li>
+                    <li><strong class="font-semibold">`protected`</strong>: Accessible within the class and its derived child classes.</li>
+                </ul>
+                <div class="mt-4">
+                    <button class="gemini-btn" data-feature="analogy">✨ Explain with an Analogy</button>
+                    <div class="gemini-output-analogy mt-2"></div>
+                </div>
+            </div>
+            <div>
+                <h3 class="text-xl font-semibold text-[#A57D52] mb-2">Example</h3>
+                <div class="code-block">
+                    <button class="copy-btn">Copy</button>
+                    <pre><code>class Base {
+public:
+    int publicMember;
+protected:
+    int protectedMember;
+private:
+    int privateMember;
+};
+
+class Derived : public Base {
+    void someFunction() {
+        publicMember = 1;    // OK
+        protectedMember = 2; // OK
+        // privateMember = 3; // ERROR
+    }
+};</code></pre>
+                </div>
+                <div class="mt-4">
+                    <button class="gemini-btn" data-feature="code">✨ Explain This Code</button>
+                    <div class="gemini-output-code mt-2"></div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="template-this-pointer">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4" data-concept-name="The 'this' Pointer">The 'this' Pointer</h2>
+        <div class="space-y-6">
+            <div>
+                <h3 class="text-xl font-semibold text-[#A57D52] mb-2">Detailed Concept</h3>
+                <p>The `this` pointer is an implicit pointer available in every non-static member function that holds the memory address of the object that called the function. It's a way for an object to refer to itself. The most common uses are:</p>
+                 <ul class="list-disc list-inside mt-2 space-y-1">
+                    <li>To resolve ambiguity when a function parameter has the same name as a data member.</li>
+                    <li>To return the current object from a method (`*this`) to allow for method chaining (e.g., `obj.setX(10).setY(20);`).</li>
+                </ul>
+                <div class="mt-4">
+                    <button class="gemini-btn" data-feature="analogy">✨ Explain with an Analogy</button>
+                    <div class="gemini-output-analogy mt-2"></div>
+                </div>
+            </div>
+            <div>
+                <h3 class="text-xl font-semibold text-[#A57D52] mb-2">Example</h3>
+                <p class="mb-2">In the constructor, `this->name = name;` is used to distinguish the data member `name` from the parameter `name`.</p>
+                <div class="code-block">
+                    <button class="copy-btn">Copy</button>
+                    <pre><code>class Person {
+public:
+    std::string name;
+
+    Person(std::string name) {
+        // 'this->name' refers to the data member of the class
+        // 'name' on the right refers to the constructor parameter
+        this->name = name;
+    }
+};</code></pre>
+                </div>
+                <div class="mt-4">
+                    <button class="gemini-btn" data-feature="code">✨ Explain This Code</button>
+                    <div class="gemini-output-code mt-2"></div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="template-static-members">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4" data-concept-name="Static Members">Static Members</h2>
+        <div class="space-y-6">
+            <div>
+                <h3 class="text-xl font-semibold text-[#A57D52] mb-2">Detailed Concept</h3>
+                <p>Static members belong to the class itself, not to any individual object. This means there is only one copy of a static member, shared by all objects of the class.</p>
+                <ul class="list-disc list-inside mt-2 space-y-1">
+                    <li><strong class="font-semibold">Static Data Members:</strong> Must be defined outside the class scope.</li>
+                    <li><strong class="font-semibold">Static Member Functions:</strong> Can be called using the class name (`ClassName::function()`). They can only access static data members and do not have a `this` pointer.</li>
+                </ul>
+                <div class="mt-4">
+                    <button class="gemini-btn" data-feature="analogy">✨ Explain with an Analogy</button>
+                    <div class="gemini-output-analogy mt-2"></div>
+                </div>
+            </div>
+            <div>
+                <h3 class="text-xl font-semibold text-[#A57D52] mb-2">Example</h3>
+                <div class="code-block">
+                    <button class="copy-btn">Copy</button>
+                    <pre><code>class Thing {
+public:
+    static int count; // Declaration of static data member
+
+    Thing() { count++; }
+    
+    static int getCount() { return count; }
+};
+
+// Definition of the static member outside the class
+int Thing::count = 0;</code></pre>
+                </div>
+                <div class="mt-4">
+                    <button class="gemini-btn" data-feature="code">✨ Explain This Code</button>
+                    <div class="gemini-output-code mt-2"></div>
+                </div>
+            </div>
+        </div>
+    </template>
+    
+    <template id="template-friend-functions">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4" data-concept-name="Friend Functions & Classes">Friend Functions & Classes</h2>
+        <div class="space-y-6">
+            <div>
+                <h3 class="text-xl font-semibold text-[#A57D52] mb-2">Detailed Concept</h3>
+                <p>A "friend" is a function or class that is granted special access to private and protected members of another class. Friendship is a one-way grant; it is not mutual, and it is not inherited.</p>
+                <div class="mt-4">
+                    <button class="gemini-btn" data-feature="analogy">✨ Explain with an Analogy</button>
+                    <div class="gemini-output-analogy mt-2"></div>
+                </div>
+            </div>
+            <div>
+                <h3 class="text-xl font-semibold text-[#A57D52] mb-2">Friend Class Example</h3>
+                <div class="code-block">
+                    <button class="copy-btn">Copy</button>
+                    <pre><code>class SecretHolder {
+private:
+    int secretValue;
+public:
+    SecretHolder() : secretValue(99) {}
+    friend class FriendOfSecret;
+};
+
+class FriendOfSecret {
+public:
+    void displaySecret(SecretHolder& sh) {
+        // Accessing private member of SecretHolder is allowed!
+        std::cout << "The secret value is: " << sh.secretValue << std::endl;
+    }
+};</code></pre>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="template-operator-overloading">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4" data-concept-name="Operator Overloading">Operator Overloading</h2>
+        <div class="space-y-6">
+            <div>
+                <h3 class="text-xl font-semibold text-[#A57D52] mb-2">Detailed Concept</h3>
+                <p>Operator overloading allows you to redefine the behavior of C++ operators (like `+`, `-`, `==`, `<<`) for objects of your own classes. It's a form of compile-time polymorphism.</p>
+                <div class="mt-4">
+                    <button class="gemini-btn" data-feature="analogy">✨ Explain with an Analogy</button>
+                    <div class="gemini-output-analogy mt-2"></div>
+                </div>
+            </div>
+            <div>
+                <h3 class="text-xl font-semibold text-[#A57D52] mb-2">Example</h3>
+                <div class="code-block">
+                    <button class="copy-btn">Copy</button>
+                    <pre><code>class Complex {
+public:
+    double real, imag;
+    Complex(double r = 0, double i = 0) : real(r), imag(i) {}
+
+    // Overload the + operator
+    Complex operator+(const Complex& other) {
+        return Complex(this->real + other.real, this->imag + other.imag);
+    }
+};</code></pre>
+                </div>
+                <div class="mt-4">
+                    <button class="gemini-btn" data-feature="code">✨ Explain This Code</button>
+                    <div class="gemini-output-code mt-2"></div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="template-virtual-functions">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4" data-concept-name="Virtual Functions">Virtual Functions</h2>
+        <div class="space-y-6">
+            <div>
+                <h3 class="text-xl font-semibold text-[#A57D52] mb-2">Detailed Concept</h3>
+                <p>A virtual function is a member function in a base class, declared with the `virtual` keyword, that you expect to redefine in derived classes. When you call a virtual function through a base class pointer or reference, C++ determines which version of the function to call at runtime based on the actual type of the object. This is known as dynamic dispatch or late binding.</p>
+                <div class="mt-4">
+                    <button class="gemini-btn" data-feature="analogy">✨ Explain with an Analogy</button>
+                    <div class="gemini-output-analogy mt-2"></div>
+                </div>
+            </div>
+            <div>
+                <h3 class="text-xl font-semibold text-[#A57D52] mb-2">Example</h3>
+                <div class="code-block">
+                    <button class="copy-btn">Copy</button>
+                    <pre><code>class Animal {
+public:
+    virtual void makeSound() { std::cout << "Generic animal sound" << std::endl; }
+};
+class Dog : public Animal {
+public:
+    void makeSound() override { std::cout << "Woof" << std::endl; }
+};</code></pre>
+                </div>
+                <div class="mt-4">
+                    <button class="gemini-btn" data-feature="code">✨ Explain This Code</button>
+                    <div class="gemini-output-code mt-2"></div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="template-abstract-classes">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4" data-concept-name="Abstract Classes">Abstract Classes</h2>
+        <div class="space-y-6">
+            <div>
+                <h3 class="text-xl font-semibold text-[#A57D52] mb-2">Detailed Concept</h3>
+                <p>An abstract class is a class designed solely to be a base class. It cannot be instantiated directly. A class becomes abstract when it has at least one **pure virtual function** (declared by assigning `= 0`). Pointers or references to an abstract class can still be declared to interact polymorphically with concrete derived objects.</p>
+                <div class="mt-4">
+                    <button class="gemini-btn" data-feature="analogy">✨ Explain with an Analogy</button>
+                    <div class="gemini-output-analogy mt-2"></div>
+                </div>
+            </div>
+            <div>
+                <h3 class="text-xl font-semibold text-[#A57D52] mb-2">Example</h3>
+                <div class="code-block">
+                    <button class="copy-btn">Copy</button>
+                    <pre><code>// Abstract base class
+class Shape {
+public:
+    virtual double getArea() = 0; // Pure virtual function
+};
+
+class Rectangle : public Shape {
+private:
+    double width, height;
+public:
+    Rectangle(double w, double h) : width(w), height(h) {}
+    
+    double getArea() override { return width * height; }
+};</code></pre>
+                </div>
+                <div class="mt-4">
+                    <button class="gemini-btn" data-feature="code">✨ Explain This Code</button>
+                    <div class="gemini-output-code mt-2"></div>
+                </div>
+            </div>
+        </div>
+    </template>
+    
+    <!-- Interview Q&A Templates -->
+    <template id="template-qa-landing">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4" data-concept-name="Interview Q&A">Interview Questions</h2>
+        <p class="mb-6 text-gray-600">Click on any question below to inspect a detailed breakdown of fundamental and advanced C++ memory & OOP behaviors.</p>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Left Column: Fundamentals -->
+            <div class="space-y-3">
+                <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Core Mechanics</h3>
+                <p><a href="#qa-what-is-oop" class="qa-link">What is Object-Oriented Programming (OOP)?</a></p>
+                <p><a href="#qa-stack-vs-heap" class="qa-link">What is the difference between Stack and Heap allocation?</a></p>
+                <p><a href="#qa-initializer-list" class="qa-link">What is a Member Initializer List and why is it used?</a></p>
+                <p><a href="#qa-default-inheritance" class="qa-link">What is the default inheritance mode for classes?</a></p>
+                <p><a href="#qa-constructor-inheritance" class="qa-link">How are constructors called during inheritance?</a></p>
+                <p><a href="#qa-overloading-overriding" class="qa-link">Function Overloading vs. Overriding?</a></p>
+                <p><a href="#qa-diamond-problem" class="qa-link">What is the Diamond Problem and how is it solved?</a></p>
+            </div>
+            
+            <!-- Right Column: Advanced & Deep Dive (Newly Added!) -->
+            <div class="space-y-3">
+                <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Advanced Deep Dives</h3>
+                <p><a href="#qa-vptr-vtable" class="qa-link">How do vptr and vtable work? Are they inherited?</a></p>
+                <p><a href="#qa-static-actual-type" class="qa-link">Static Type vs. Actual Type in dynamic binding?</a></p>
+                <p><a href="#qa-method-chaining-return-type" class="qa-link">Method Chaining: Return by Value vs. Reference?</a></p>
+                <p><a href="#qa-delete-this" class="qa-link">Is calling 'delete this' safe? When does it crash?</a></p>
+                <p><a href="#qa-object-slicing" class="qa-link">What is Object Slicing and how can it be prevented?</a></p>
+                <p><a href="#qa-derived-to-base" class="qa-link">Why Derived-to-Base assignment but not vice-versa?</a></p>
+                <p><a href="#qa-virtual-destructor" class="qa-link">Why do we need a Virtual Destructor?</a></p>
+            </div>
+        </div>
+    </template>
+    
+    <template id="template-qa-what-is-oop">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4" data-concept-name="What is OOP?">Q: What is Object-Oriented Programming (OOP)?</h2>
+        <div class="space-y-4 text-gray-700">
+            <p>Object-Oriented Programming is a programming paradigm based on the concept of "objects", which can contain data in the form of fields (attributes or properties) and code (methods).</p>
+            <p>The primary purpose of OOP is to increase the flexibility and maintainability of programs. It binds together the data and the functions that operate on them so that no other part of the code can access this data except that function.</p>
+        </div>
+    </template>
+
+    <template id="template-qa-vptr-vtable">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4" data-concept-name="vptr & vtable">Q: How do vptr and vtable work under the hood? Are they inherited?</h2>
+        <div class="space-y-4 text-gray-700 font-normal">
+            <p>C++ implements run-time polymorphism using a combination of two compiler-generated structures: the <strong>Virtual Table (vtable)</strong> and the <strong>Virtual Pointer (vptr)</strong>.</p>
+            <ul class="list-disc list-inside space-y-2 pl-4">
+                <li><strong>vtable (Virtual Table):</strong> A static lookup array of function pointers. There is exactly <strong>one vtable per class</strong> that defines virtual functions. It holds the addresses of the most specific implementations of virtual functions for that class.</li>
+                <li><strong>vptr (Virtual Pointer):</strong> A hidden pointer automatically added inside <strong>every object</strong> of a polymorphic class. The vptr points to the vtable associated with the object's specific runtime class.</li>
+            </ul>
+            <h3 class="text-xl font-semibold text-[#A57D52] mt-4">Is the vptr Inherited?</h3>
+            <p><strong>No, the base class's vptr is not inherited as a separate, immutable entity.</strong> A derived class object has exactly <strong>one vptr</strong> (in single inheritance hierarchies). This vptr is initialized by the derived class's constructor at instantiation to point exclusively to the <strong>derived class's own vtable</strong>. This ensures that when a virtual function is called through a base class pointer, C++ correctly navigates to the derived class's override instead of the base implementation.</p>
+        </div>
+    </template>
+
+    <template id="template-qa-static-actual-type">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4" data-concept-name="Static & Actual Type">Q: What is the difference between Static Type and Actual Type?</h2>
+        <div class="space-y-4 text-gray-700">
+            <p>Understanding these two concepts is key to predicting how C++ resolves chained member method calls:</p>
+            <ul class="list-disc list-inside space-y-2 pl-4">
+                <li><strong>Static Type (Compile-Time Type):</strong> The declared type of the variable, pointer, or reference in the source code. It is fixed at compile-time and determines what functions the compiler allows you to call.</li>
+                <li><strong>Actual Type (Run-Time Type):</strong> The actual identity of the object in memory (e.g., what constructor was run). It can change dynamically depending on what the base pointer currently points to.</li>
+            </ul>
+            <h3 class="text-xl font-semibold text-[#A57D52] mt-4">The Resolution Rules:</h3>
+            <ol class="list-decimal list-inside space-y-2 pl-4">
+                <li><strong>Non-Virtual Functions:</strong> Resolved using <strong>Static Binding</strong> based on the expression's <strong>Static Type</strong>. The compiler looks at the "job title" (declared class) and locks in that call.</li>
+                <li><strong>Virtual Functions:</strong> Resolved using <strong>Dynamic Binding</strong> based on the expression's <strong>Actual Type</strong>. At runtime, the program follows the vptr of the "true self" to resolve the override.</li>
+            </ol>
+        </div>
+    </template>
+
+    <template id="template-qa-method-chaining-return-type">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4" data-concept-name="Chaining & Returns">Q: Method Chaining: What is the pitfall of returning by Value instead of Reference?</h2>
+        <div class="space-y-4 text-gray-700">
+            <p>For method chaining (e.g., <code>obj.setX(10).setY(20);</code>) to work correctly, your setters must return a <strong>reference to the current object</strong> (<code>*this</code>) by reference (<code>ClassName&</code>).</p>
+            <h3 class="text-xl font-semibold text-[#A57D52] mt-4">Returning by Value (The Copy Trap)</h3>
+            <p>If a setter returns by value (e.g., <code>Test setX(int a)</code>):</p>
+            <ol class="list-decimal list-inside space-y-2 pl-4">
+                <li>The first call (<code>obj.setX(10)</code>) successfully modifies the original object's member <code>x</code>.</li>
+                <li>However, it returns a <strong>temporary copy</strong> of the object as its result.</li>
+                <li>The subsequent chained call (<code>.setY(20)</code>) is executed on this **temporary copy**, modifying only the copy's member <code>y</code>.</li>
+                <li>At the end of the line (at the semicolon), the temporary copy is destroyed, and the original object is left with <code>x = 10</code> and its unmodified original <code>y</code>!</li>
+            </ol>
+            <p><strong>Rule:</strong> Always return by reference (<code>ClassName&</code>) and return <code>*this</code> for chainable actions.</p>
+        </div>
+    </template>
+
+    <template id="template-qa-delete-this">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4" data-concept-name="delete this">Q: Is calling 'delete this' safe? When does it cause a crash?</h2>
+        <div class="space-y-4 text-gray-700">
+            <p>Yes, calling <code>delete this;</code> is syntactically valid in C++, but it is highly dangerous and must be used with extreme caution.</p>
+            <h3 class="text-xl font-semibold text-[#A57D52] mt-4">Conditions for Safe Execution:</h3>
+            <ul class="list-disc list-inside space-y-2 pl-4">
+                <li>The object **must** have been allocated on the **heap** using the <code>new</code> operator. If the object was created on the **stack** (e.g., <code>Test obj;</code>), calling <code>delete this;</code> triggers severe stack corruption and an immediate program crash.</li>
+                <li>After <code>delete this;</code> executes, **no member variables or member functions** of that class can be accessed, because the memory is now reclaimed. Accessing them (e.g., calling <code>obj.print()</code> afterward) is a **use-after-free** error, producing unpredictable "undefined behavior" or crashes.</li>
+                <li>No other code must attempt to deallocate the same object ever again.</li>
+            </ul>
+        </div>
+    </template>
+    
+    <template id="template-qa-constructor-destructor">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4" data-concept-name="Constructor vs Destructor">Q: What is the difference between a Constructor and a Destructor?</h2>
+        <div class="space-y-4 text-gray-700">
+            <p>Both are special member functions of a class that are called automatically, but they serve opposite purposes.</p>
+            <h3 class="text-xl font-semibold text-[#A57D52] mt-4">Constructor</h3>
+            <ul class="list-disc list-inside space-y-2 pl-4">
+                <li><strong>Purpose:</strong> To initialize an object when it is created.</li>
+                <li><strong>Calling:</strong> Called automatically when an object is instantiated.</li>
+            </ul>
+            <h3 class="text-xl font-semibold text-[#A57D52] mt-4">Destructor</h3>
+            <ul class="list-disc list-inside space-y-2 pl-4">
+                <li><strong>Purpose:</strong> To clean up resources when an object is destroyed.</li>
+                <li><strong>Calling:</strong> Called automatically when an object goes out of scope or is explicitly deleted.</li>
+            </ul>
+        </div>
+    </template>
+    
+    <template id="template-qa-overloading-overriding">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4" data-concept-name="Overloading vs Overriding">Q: Differentiate between Function Overloading and Function Overriding.</h2>
+        <div class="space-y-4 text-gray-700">
+            <p>Both are forms of Polymorphism but are fundamentally different concepts.</p>
+            <h3 class="text-xl font-semibold text-[#A57D52] mt-4">Function Overloading (Compile-time Polymorphism)</h3>
+            <ul class="list-disc list-inside space-y-2 pl-4">
+                <li><strong>Scope:</strong> Occurs within the same class.</li>
+                <li><strong>Signature:</strong> Functions must have the same name but different parameters.</li>
+            </ul>
+            <h3 class="text-xl font-semibold text-[#A57D52] mt-4">Function Overriding (Run-time Polymorphism)</h3>
+            <ul class="list-disc list-inside space-y-2 pl-4">
+                <li><strong>Scope:</strong> Occurs in a derived class, redefining a `virtual` function from its base class.</li>
+                <li><strong>Signature:</strong> The function must have the same name, parameters, and return type.</li>
+            </ul>
+        </div>
+    </template>
+    
+    <template id="template-qa-virtual-destructor">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4" data-concept-name="Virtual Destructor">Q: Why do we need a Virtual Destructor?</h2>
+        <div class="space-y-4 text-gray-700">
+            <p>A virtual destructor is crucial when you `delete` an object of a derived class through a pointer to its base class. If the base class destructor is not `virtual`, only the base class destructor is called, leading to resource leaks from the derived part of the object. Declaring the base destructor as `virtual` ensures that both the derived and base destructors are called in the correct order, guaranteeing proper cleanup.</p>
+        </div>
+    </template>
+
+    <template id="template-qa-diamond-problem">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4" data-concept-name="The Diamond Problem">Q: What is the Diamond Problem and how is it solved in C++?</h2>
+        <div class="space-y-4 text-gray-700">
+            <p>The Diamond Problem is an ambiguity in multiple inheritance. If class `D` inherits from `B` and `C`, and both `B` and `C` inherit from a common class `A`, `D` gets two copies of `A`'s members. C++ solves this using **virtual inheritance**. By having `B` and `C` inherit virtually from `A` (`class B : virtual public A`), you ensure that `D` receives only one shared copy of `A`'s members.</p>
+        </div>
+    </template>
+    
+    <template id="template-qa-normal-vs-abstract">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4" data-concept-name="Normal vs Abstract Class">Q: What is the difference between a Normal (Concrete) Class and an Abstract Class?</h2>
+        <div class="space-y-4 text-gray-700">
+             <p>The main difference is that you **cannot create an object** (an instance) of an abstract class. An abstract class acts as a blueprint for other classes and is defined by having at least one **pure virtual function** (`virtual void func() = 0;`). A normal, or concrete, class is a "complete" class from which you can create objects.</p>
+        </div>
+    </template>
+
+    <template id="template-qa-constructor-inheritance">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4" data-concept-name="Constructors in Inheritance">Q: How are constructors called during inheritance?</h2>
+        <div class="space-y-4 text-gray-700">
+            <p>When a derived class object is created, the base class constructor is always called first to initialize the base part of the object, followed by the derived class constructor. If the base class only has constructors with parameters, the derived constructor **must** explicitly call one of them using a member initializer list.</p>
+        </div>
+    </template>
+
+    <template id="template-qa-initializer-list">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4" data-concept-name="Member Initializer List">Q: What is a Member Initializer List and why is it used?</h2>
+        <div class="space-y-4 text-gray-700">
+            <p>A Member Initializer List is a special syntax in a constructor used to initialize data members directly, before the constructor's body is executed. It is more efficient than assignment and is required for initializing `const` members, reference members, and members that don't have a default constructor.</p>
+        </div>
+    </template>
+    
+    <template id="template-qa-default-inheritance">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4" data-concept-name="Default Inheritance Mode">Q: What is the default inheritance mode for classes?</h2>
+        <div class="space-y-4 text-gray-700">
+            <p>For a **`class`**, the default inheritance mode is **`private`**. For a **`struct`**, it is **`public`**. With `private` inheritance, all `public` and `protected` members of the base class become `private` members of the derived class, meaning they cannot be accessed from an object of the derived class.</p>
+        </div>
+    </template>
+    
+    <template id="template-qa-pointers-for-polymorphism">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4" data-concept-name="Pointers for Polymorphism">Q: Why are pointers or references needed for polymorphism?</h2>
+        <div class="space-y-4 text-gray-700">
+            <p>Pointers or references are essential for runtime polymorphism to avoid a problem called **<a href="#qa-object-slicing" class="concept-link">object slicing</a>**. If you assign a derived class object directly to a base class object (e.g., `Base b = d;`), the derived-specific parts are "sliced off," and you are left with only a Base object. This loses all polymorphic behavior.</p>
+            <p>A base class pointer or reference, however, can point to a derived class object without slicing it. It holds the memory address of the complete object. When you call a `virtual` function through that pointer, C++ can look at the actual object's type at runtime and call the correct, overridden version of the function.</p>
+        </div>
+    </template>
+    
+    <template id="template-qa-object-slicing">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4" data-concept-name="Object Slicing">Q: What is Object Slicing and how can it be prevented?</h2>
+        <div class="space-y-4 text-gray-700">
+            <p>Object slicing occurs when a derived class object is assigned to a base class object. During this process, the specialized parts of the derived object are lost (sliced off), and only the data members of the base class are copied. This leads to the loss of polymorphic behavior.</p>
+            <h3 class="text-xl font-semibold text-[#A57D52] mt-4 font-sans">Example of Slicing</h3>
+            <div class="code-block">
+                <button class="copy-btn">Copy</button>
+                <pre><code>class Base { public: virtual void whoAmI() { std::cout << "I am Base\n"; } };
+class Derived : public Base { public: void whoAmI() override { std::cout << "I am Derived\n"; } };
+
+int main() {
+    Derived d;
+    Base b = d; // Object Slicing happens here!
+    b.whoAmI(); // Prints "I am Base" because b is a Base object.
+    return 0;
+}</code></pre>
+            </div>
+            <h3 class="text-xl font-semibold text-[#A57D52] mt-4">How to Prevent It</h3>
+            <ol class="list-decimal list-inside space-y-4 pl-4">
+                <li><strong>Use Pointers or References:</strong> This is the most common way. They refer to the original object without creating a copy, thus preserving its full type.
+                    <div class="code-block mt-2">
+                        <button class="copy-btn">Copy</button>
+                        <pre><code>Derived d;
+Base* b_ptr = &d; // Using a pointer
+Base& b_ref = d;  // Using a reference
+b_ptr->whoAmI();  // Correctly prints "I am Derived"
+b_ref.whoAmI();   // Correctly prints "I am Derived"</code></pre>
+                    </div>
+                </li>
+            </ol>
+        </div>
+    </template>
+    
+    <template id="template-qa-derived-to-base">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4" data-concept-name="Derived to Base Assignment">Q: Why can a derived object be assigned to a base object, but not vice-versa?</h2>
+        <div class="space-y-4 text-gray-700">
+            <p>This rule is fundamental to the "is-a" relationship in inheritance. A derived object *is-a* specialized version of a base object, but a base object is not necessarily a derived object.</p>
+            
+            <h3 class="text-xl font-semibold text-[#A57D52] mt-4">1. Derived to Base Assignment (Possible)</h3>
+            <p>This is like saying, "An Apple is-a Fruit." This is always true. An `Apple` object contains all the parts of a `Fruit` object, plus its own specific parts. When you assign a derived object to a base object (`Base b = derived_d;`), the derived-specific parts are "sliced off" in a process called <a href="#qa-object-slicing" class="concept-link">object slicing</a>. You are left with just the base part, which is a valid assignment.</p>
+            
+            <h3 class="text-xl font-semibold text-[#A57D52] mt-4">2. Base to Derived Assignment (Not Possible)</h3>
+            <p>This is like saying, "A Fruit is-a Apple." This is not necessarily true; the fruit could be a banana. A `Fruit` object does not contain the specific members that an `Apple` needs to exist (like `variety` or `seed_count`). The compiler cannot magically invent the missing data, so it forbids this assignment to prevent creating an incomplete or invalid object.</p>
+        </div>
+    </template>
+
+    <template id="template-qa-stack-vs-heap">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4" data-concept-name="Stack vs Heap Allocation">Q: What is the difference between Stack and Heap allocation?</h2>
+        <div class="space-y-4 text-gray-700">
+            <p>The key difference is how memory is allocated and managed for objects.</p>
+            <h3 class="text-xl font-semibold text-[#A57D52] mt-4">1. Stack Allocation (e.g., `Base b(33);`)</h3>
+            <ul class="list-disc list-inside space-y-2 pl-4">
+                <li><strong>Memory Location:</strong> The stack, a region of memory managed automatically by the program for function calls and local variables.</li>
+                <li><strong>Lifetime:</strong> Automatic. The object is created when the line is executed and is automatically destroyed when it goes out of scope (e.g., at the end of a function).</li>
+                <li><strong>Cleanup:</strong> Automatic. No need to manually deallocate memory.</li>
+                <li><strong>Access:</strong> Using the dot operator (e.g., `b.display();`).</li>
+            </ul>
+            <h3 class="text-xl font-semibold text-[#A57D52] mt-4">2. Heap Allocation (e.g., `Base *bp = new Base(33);`)</h3>
+            <ul class="list-disc list-inside space-y-2 pl-4">
+                <li>
+                    <strong>Memory Location:</strong> The heap (or free store), a large pool of memory for dynamic allocation.
+                </li>
+                <li><strong>Lifetime:</strong> Manual. The object exists from the moment `new` is called until you explicitly destroy it with `delete`. It can outlive the scope it was created in.</li>
+                <li><strong>Cleanup:</strong> Manual. You are responsible for calling `delete` on the pointer. Forgetting to do so causes a **memory leak**.</li>
+                <li><strong>Access:</strong> Using the arrow operator on a pointer (e.g., `bp->display();`).</li>
+            </ul>
+        </div>
+    </template>
+    
+    <template id="template-qa-upcasting-downcasting">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4" data-concept-name="Upcasting vs Downcasting">Q: What are Upcasting and Downcasting?</h2>
+        <div class="space-y-4 text-gray-700 font-sans">
+            <p>These terms describe converting pointers/references between base and derived classes.</p>
+            
+            <h3 class="text-xl font-semibold text-[#A57D52] mt-4">Upcasting (Derived to Base)</h3>
+            <p>Upcasting converts a derived class pointer to a base class pointer. This is always **safe** and is done **implicitly** by C++.</p>
+            
+            <h3 class="text-xl font-semibold text-[#A57D52] mt-4">Downcasting (Base to Derived)</h3>
+            <p>Downcasting converts a base class pointer to a derived class pointer. This is **unsafe** because the base pointer might not actually point to an object of the target derived type. To do this safely, you must use `dynamic_cast`.</p>
+            <ul class="list-disc list-inside space-y-2 pl-4">
+                <li>`dynamic_cast` checks the actual type of the object at runtime.</li>
+                <li>If the cast is invalid, it returns `nullptr`. You must always check for `nullptr`.</li>
+                <li>The base class must have at least one virtual function for `dynamic_cast` to compile.</li>
+            </ul>
+        </div>
+    </template>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const mainContent = document.getElementById('main-content');
+            const navMenu = document.getElementById('nav-menu');
+            const sidebar = document.getElementById('sidebar');
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+
+            const showContent = (hash) => {
+                const id = hash ? hash.substring(1) : 'welcome';
+                const template = document.getElementById(`template-${id}`);
+                
+                if (template) {
+                    mainContent.innerHTML = template.innerHTML;
+                    mainContent.scrollTop = 0;
+                    updateActiveLink(id);
+                    attachEventListeners();
+                } else {
+                    mainContent.innerHTML = document.getElementById('template-welcome').innerHTML;
+                    updateActiveLink('welcome');
+                    attachEventListeners();
+                }
+                
+                if (sidebar.classList.contains('open')) {
+                    sidebar.classList.remove('open');
+                }
+            };
+
+            const updateActiveLink = (id) => {
+                navMenu.querySelectorAll('.nav-link').forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href') === `#${id}` || (id.startsWith('qa-') && link.getAttribute('href') === '#qa-landing')) {
+                        link.classList.add('active');
+                    }
+                });
+            };
+            
+            // AI Response with Exponential Backoff retry strategy
+            async function callGeminiAPI(prompt, button, outputDiv) {
+                button.disabled = true;
+                outputDiv.innerHTML = '<div class="loader"></div>';
+
+                const apiKey = ""; // Empty string, provided by runtime
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                
+                const payload = {
+                    contents: [{
+                        parts: [{ text: prompt }]
+                    }]
+                };
+
+                const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+                const retryDelays = [1000, 2000, 4000, 8000, 16000];
+
+                for (let attempt = 0; attempt <= 5; attempt++) {
+                    try {
+                        const response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`API returned status ${response.status}: ${response.statusText}`);
+                        }
+
+                        const result = await response.json();
+                        const rawText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                        
+                        if (rawText) {
+                            // Basic sanitization and markdown styling helpers
+                            const parsedText = rawText
+                                .replace(/&/g, "&amp;")
+                                .replace(/</g, "&lt;")
+                                .replace(/>/g, "&gt;")
+                                .replace(/\n/g, '<br>')
+                                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                                .replace(/`([^`]+)`/g, '<code class="bg-gray-200 text-[#8C6A46] px-1 rounded">$1</code>');
+
+                            outputDiv.innerHTML = `<div class="gemini-output font-sans text-sm leading-relaxed">${parsedText}</div>`;
+                            button.disabled = false;
+                            return; // Successful finish
+                        } else {
+                            throw new Error("No textual output was returned from Gemini.");
+                        }
+
+                    } catch (error) {
+                        if (attempt < 5) {
+                            await wait(retryDelays[attempt]); // Exponential backoff retry
+                        } else {
+                            outputDiv.innerHTML = `<div class="gemini-output text-red-600">Failed to connect to the assistant after 5 attempts. please check connection. <br><small>${error.message}</small></div>`;
+                        }
+                    }
+                }
+                button.disabled = false;
+            }
+
+            const handleGeminiFeature = (e) => {
+                const button = e.target;
+                const feature = button.dataset.feature;
+                const conceptName = mainContent.querySelector('h2').dataset.conceptName;
+                
+                let prompt = '';
+                let outputDiv;
+
+                if (feature === 'analogy') {
+                    prompt = `Explain the C++ Object-Oriented Programming concept of '${conceptName}' with a simple, real-world analogy that a beginner can understand. Keep it concise, professional, and clear.`;
+                    outputDiv = button.nextElementSibling;
+                } else if (feature === 'code') {
+                    const codeBlock = button.parentElement.previousElementSibling.querySelector('pre code');
+                    const code = codeBlock.textContent;
+                    prompt = `Explain the following C++ code line by line in a way that is easy for a beginner to understand. Focus on the Object-Oriented Programming and memory concepts demonstrated in the code.\n\n\`\`\`cpp\n${code}\n\`\`\``;
+                    outputDiv = button.nextElementSibling;
+                }
+
+                if (prompt && outputDiv) {
+                    callGeminiAPI(prompt, button, outputDiv);
+                }
+            };
+
+            const attachEventListeners = () => {
+                mainContent.querySelectorAll('.copy-btn').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const code = e.target.nextElementSibling.textContent;
+                        
+                        // Robust sandbox copy method fallback-ready
+                        const textarea = document.createElement('textarea');
+                        textarea.value = code;
+                        textarea.style.position = 'fixed'; // Do not scroll body
+                        document.body.appendChild(textarea);
+                        textarea.select();
+                        try {
+                            document.execCommand('copy');
+                            e.target.textContent = 'Copied!';
+                            setTimeout(() => { e.target.textContent = 'Copy'; }, 2000);
+                        } catch (err) {
+                            console.error('Copy fallback failed', err);
+                        }
+                        document.body.removeChild(textarea);
+                    });
+                });
+
+                mainContent.querySelectorAll('.concept-link, .nav-link-card, .qa-link').forEach(link => {
+                    link.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const hash = e.currentTarget.getAttribute('href');
+                        window.location.hash = hash;
+                    });
+                });
+
+                mainContent.querySelectorAll('.gemini-btn').forEach(button => {
+                    button.addEventListener('click', handleGeminiFeature);
+                });
+            };
+            
+            navMenu.addEventListener('click', (e) => {
+                if (e.target.matches('.nav-link')) {
+                    e.preventDefault();
+                    const hash = e.target.getAttribute('href');
+                    window.location.hash = hash;
+                }
+            });
+
+            mobileMenuButton.addEventListener('click', () => {
+                sidebar.classList.toggle('open');
+            });
+
+            window.addEventListener('hashchange', () => showContent(window.location.hash));
+
+            // Initial load
+            showContent(window.location.hash);
+        });
+    </script>
+</body>
+</html>
